@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
-import { pearlGlassFragmentShader } from "../shaders/pearlGlassFragmentShader";
-import { pearlGlassVertexShader } from "../shaders/pearlGlassVertexShader";
+import { pearlGlassFragmentShader } from "../shaders/pearl-glass-fragment-shader";
+import { pearlGlassVertexShader } from "../shaders/pearl-glass-vertex-shader";
 
 type PearlGlassUniforms = {
   uTime: THREE.IUniform<number>;
