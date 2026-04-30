@@ -1,4 +1,4 @@
-export const pearlGlassFragmentShader = `
+export const pearlGlassFragmentShader: string = `
   precision highp float;
 
   uniform float uTime;

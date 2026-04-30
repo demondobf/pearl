@@ -1,4 +1,4 @@
-import { createPearlGlassScene } from "./scene/createPearlGlassScene.js";
+import { createPearlGlassScene } from "./scene/createPearlGlassScene";
 
 const pearlGlass = createPearlGlassScene(document.body);
 

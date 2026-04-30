@@ -1,11 +1,21 @@
 import * as THREE from "three";
 
-import { pearlGlassFragmentShader } from "../shaders/pearlGlassFragmentShader.js";
-import { pearlGlassVertexShader } from "../shaders/pearlGlassVertexShader.js";
+import { pearlGlassFragmentShader } from "../shaders/pearlGlassFragmentShader";
+import { pearlGlassVertexShader } from "../shaders/pearlGlassVertexShader";
 
-const getRenderScale = () => Math.min(devicePixelRatio || 1, 4);
+type PearlGlassUniforms = {
+  uTime: THREE.IUniform<number>;
+  uCamPos: THREE.IUniform<THREE.Vector3>;
+};
 
-function createRenderer() {
+export type PearlGlassScene = {
+  start: () => void;
+  resize: () => void;
+};
+
+const getRenderScale = (): number => Math.min(devicePixelRatio || 1, 4);
+
+function createRenderer(): THREE.WebGLRenderer {
   const renderer = new THREE.WebGLRenderer({
     antialias: true,
     powerPreference: "high-performance",
@@ -21,7 +31,7 @@ function createRenderer() {
   return renderer;
 }
 
-function createMaterial() {
+function createMaterial(): THREE.ShaderMaterial & { uniforms: PearlGlassUniforms } {
   return new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
@@ -32,10 +42,10 @@ function createMaterial() {
     side: THREE.DoubleSide,
     transparent: true,
     depthWrite: false,
-  });
+  }) as THREE.ShaderMaterial & { uniforms: PearlGlassUniforms };
 }
 
-function createPearlMesh(material) {
+function createPearlMesh(material: THREE.Material): THREE.Mesh<THREE.PlaneGeometry, THREE.Material> {
   const geometry = new THREE.PlaneGeometry(5.4, 3.9, 1280, 1280);
   const mesh = new THREE.Mesh(geometry, material);
 
@@ -46,7 +56,7 @@ function createPearlMesh(material) {
   return mesh;
 }
 
-export function createPearlGlassScene(container) {
+export function createPearlGlassScene(container: HTMLElement): PearlGlassScene {
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x000000, 0.22);
 
@@ -60,7 +70,7 @@ export function createPearlGlassScene(container) {
   scene.add(mesh);
   container.appendChild(renderer.domElement);
 
-  function animate(t = 0) {
+  function animate(t = 0): void {
     material.uniforms.uTime.value = t * 0.001;
 
     camera.position.x = Math.sin(t * 0.00012) * 0.05;
@@ -73,7 +83,7 @@ export function createPearlGlassScene(container) {
     requestAnimationFrame(animate);
   }
 
-  function resize() {
+  function resize(): void {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(innerWidth, innerHeight);

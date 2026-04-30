@@ -1,4 +1,4 @@
-export const pearlGlassVertexShader = `
+export const pearlGlassVertexShader: string = `
   uniform float uTime;
   varying vec3 vWorld;
   varying vec2 vUv;
