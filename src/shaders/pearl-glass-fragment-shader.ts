@@ -54,6 +54,8 @@ export const pearlGlassFragmentShader: string = `
     vec3 dx = dFdx(vWorld);
     vec3 dy = dFdy(vWorld);
     vec3 normal = normalize(cross(dx, dy));
+    vec3 foldNormal = normal;
+    normal = normalize(mix(normal, vec3(0.0, 0.0, 1.0), 0.54));
     vec3 viewDir = normalize(uCamPos - vWorld);
 
     vec3 lightA = normalize(vec3(-0.52, 0.7, 1.0));
@@ -70,17 +72,19 @@ export const pearlGlassFragmentShader: string = `
     vec3 halfA = normalize(lightA + viewDir);
     vec3 halfB = normalize(lightB + viewDir);
     vec3 halfC = normalize(lightC + viewDir);
-    float specA = pow(max(dot(normal, halfA), 0.0), 72.0);
+    float specA = pow(max(dot(normal, halfA), 0.0), 64.0);
     float specB = pow(max(dot(normal, halfB), 0.0), 38.0);
-    float specC = pow(max(dot(normal, halfC), 0.0), 132.0);
+    float specC = pow(max(dot(normal, halfC), 0.0), 96.0);
+    float foldSpec = pow(max(dot(foldNormal, halfA), 0.0), 118.0);
 
-    float flow = vUv.x * 0.95 + vUv.y * 0.7 + vHeight * 1.8;
-    float band = sin(flow * 13.0 - uTime * 0.24) * 0.5 + 0.5;
-    float veil = sin((vUv.x - vUv.y) * 10.0 + uTime * 0.16) * 0.5 + 0.5;
-    float caustic = pow(clamp(0.58 * band + 0.42 * veil, 0.0, 1.0), 3.0);
+    float flow = vUv.x * 0.95 + vUv.y * 0.7 + vHeight * 2.2;
+    float band = sin(flow * 13.0 - uTime * 0.3 + foldNormal.x * 1.35) * 0.5 + 0.5;
+    float veil = sin((vUv.x - vUv.y + foldNormal.y * 0.08) * 10.0 + uTime * 0.19) * 0.5 + 0.5;
+    float tide = sin((vUv.x * 2.8 + vUv.y * 1.7) + uTime * 0.34 + vHeight * 3.0) * 0.5 + 0.5;
+    float caustic = pow(clamp(0.5 * band + 0.34 * veil + 0.16 * tide, 0.0, 1.0), 2.65);
     float thinEdge = smoothstep(0.42, 1.0, fresnel);
     float brightVein = pow(smoothstep(0.64, 1.0, band) * smoothstep(0.46, 1.0, veil), 3.6);
-    float hairline = pow(sin((vUv.x * 1.8 + vUv.y * 4.8 + vHeight * 2.2) * 28.0 - uTime * 0.48) * 0.5 + 0.5, 18.0);
+    float hairline = pow(sin((vUv.x * 1.8 + vUv.y * 4.8 + vHeight * 2.6 + foldNormal.x * 0.16) * 28.0 - uTime * 0.56) * 0.5 + 0.5, 16.0);
 
     vec3 smokedGlass = vec3(0.004, 0.005, 0.006);
     vec3 graphite = vec3(0.035, 0.04, 0.046);
@@ -99,17 +103,16 @@ export const pearlGlassFragmentShader: string = `
     vec2 edge = min(vUv, 1.0 - vUv);
     float borderFade = smoothstep(0.0, 0.2, edge.x) * smoothstep(0.0, 0.2, edge.y);
     float diagonalFlow = vUv.x - vUv.y + 0.08 + sin(vUv.y * 3.2 + uTime * 0.08) * 0.035;
-    float diagonalVoid = smoothstep(-0.78, 0.58, diagonalFlow);
-    float topLeftStart = smoothstep(0.46, 0.82, vUv.y) * smoothstep(0.24, 0.02, vUv.x);
-    float leftSoftness = max(smoothstep(0.14, 0.42, vUv.x), topLeftStart * 0.82);
-    diagonalVoid *= leftSoftness;
-    float surfaceMask = smoothstep(0.08, 0.72, borderFade * diagonalVoid);
+    float flowShade = smoothstep(-0.92, 0.86, diagonalFlow);
+    float softSurface = borderFade * mix(0.42, 1.0, flowShade);
+    float surfaceMask = smoothstep(0.0, 0.78, softSurface);
+    float alphaMask = borderFade * mix(0.76, 1.0, smoothstep(-1.1, 0.95, diagonalFlow));
 
-    vec3 liquidReflection = tintedSilver * (0.035 + diffuseA * 0.18 + caustic * 0.2);
-    vec3 rim = mix(tintedSilver, tintedPrism, caustic) * thinEdge * 1.08 * surfaceMask;
-    vec3 glint = (whiteHot * (specA * 0.82 + specC * 1.45) + tintedPrism * specB * 0.26) * surfaceMask;
+    vec3 liquidReflection = tintedSilver * (0.04 + diffuseA * 0.2 + caustic * 0.24);
+    vec3 rim = mix(tintedSilver, tintedPrism, caustic) * thinEdge * 1.12 * surfaceMask;
+    vec3 glint = (whiteHot * (specA * 0.74 + specC * 1.08 + foldSpec * 0.32) + tintedPrism * specB * 0.24) * surfaceMask;
 
-    vec2 glitterUv = vUv + normal.xy * 0.075 + vec2(vHeight * 0.08, -vHeight * 0.05);
+    vec2 glitterUv = vUv + foldNormal.xy * 0.064 + normal.xy * 0.02 + vec2(vHeight * 0.1, -vHeight * 0.065);
     float glitterFlow = smoothstep(0.26, 1.0, caustic + fresnel * 0.82 + brightVein * 0.55);
     float fineGlitter =
       glitterLayer(glitterUv + vec2(uTime * 0.006, -uTime * 0.004), 280.0, 0.93, 0.035, 5.7) * 0.52 +
@@ -119,18 +122,18 @@ export const pearlGlassFragmentShader: string = `
     float sparkle = (fineGlitter + dust) * glitterFlow * surfaceMask;
     vec3 prismGlitter = mix(vec3(0.78, 0.92, 1.0), vec3(1.0, 0.9, 0.66), hash21(floor(glitterUv * 165.0) + 4.2));
 
-    float shadowFold = smoothstep(-0.12, 0.28, vHeight);
-    vec3 color = mix(base * 0.32, base + liquidReflection, shadowFold);
+    float shadowFold = smoothstep(-0.26, 0.4, vHeight);
+    vec3 color = mix(base * 0.48, base + liquidReflection, shadowFold);
     color += rim + glint;
     color += tintedSilver * brightVein * 0.18;
-    color += whiteHot * hairline * caustic * 0.16;
+    color += whiteHot * hairline * caustic * 0.14;
     color += whiteHot * sparkle * 0.62;
     color += prismGlitter * sparkle * 0.22;
     color += vec3(0.52, 0.62, 0.72) * pow(caustic, 6.5) * 0.1;
     color *= 0.72 + fresnel * 0.55;
     color = min(color, vec3(1.32));
 
-    float alpha = clamp(borderFade * (0.42 + shadowFold * 0.5 + fresnel * 0.42) * diagonalVoid, 0.0, 0.96);
+    float alpha = clamp(alphaMask * (0.4 + shadowFold * 0.46 + fresnel * 0.32), 0.0, 0.92);
 
     gl_FragColor = vec4(color, alpha);
   }
