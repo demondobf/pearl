@@ -6,11 +6,16 @@ import { pearlGlassVertexShader } from "../shaders/pearl-glass-vertex-shader";
 type PearlGlassUniforms = {
   uTime: THREE.IUniform<number>;
   uCamPos: THREE.IUniform<THREE.Vector3>;
+  uLightColor: THREE.IUniform<THREE.Color>;
 };
 
 export type PearlGlassScene = {
   start: () => void;
   resize: () => void;
+};
+
+export type PearlGlassSceneOptions = {
+  lightColor?: THREE.ColorRepresentation;
 };
 
 const getRenderScale = (): number => Math.min(devicePixelRatio || 1, 4);
@@ -31,11 +36,12 @@ function createRenderer(): THREE.WebGLRenderer {
   return renderer;
 }
 
-function createMaterial(): THREE.ShaderMaterial & { uniforms: PearlGlassUniforms } {
+function createMaterial(lightColor: THREE.ColorRepresentation): THREE.ShaderMaterial & { uniforms: PearlGlassUniforms } {
   return new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
       uCamPos: { value: new THREE.Vector3() },
+      uLightColor: { value: new THREE.Color(lightColor) },
     },
     vertexShader: pearlGlassVertexShader,
     fragmentShader: pearlGlassFragmentShader,
@@ -56,7 +62,7 @@ function createPearlMesh(material: THREE.Material): THREE.Mesh<THREE.PlaneGeomet
   return mesh;
 }
 
-export function createPearlGlassScene(container: HTMLElement): PearlGlassScene {
+export function createPearlGlassScene(container: HTMLElement, options: PearlGlassSceneOptions = {}): PearlGlassScene {
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x000000, 0.22);
 
@@ -64,7 +70,7 @@ export function createPearlGlassScene(container: HTMLElement): PearlGlassScene {
   camera.position.set(0, 0, 2.35);
 
   const renderer = createRenderer();
-  const material = createMaterial();
+  const material = createMaterial(options.lightColor ?? 0xf4fbff);
   const mesh = createPearlMesh(material);
 
   scene.add(mesh);

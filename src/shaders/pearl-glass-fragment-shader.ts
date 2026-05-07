@@ -3,6 +3,7 @@ export const pearlGlassFragmentShader: string = `
 
   uniform float uTime;
   uniform vec3 uCamPos;
+  uniform vec3 uLightColor;
   varying vec3 vWorld;
   varying vec2 vUv;
   varying float vHeight;
@@ -84,8 +85,11 @@ export const pearlGlassFragmentShader: string = `
     vec3 smokedGlass = vec3(0.004, 0.005, 0.006);
     vec3 graphite = vec3(0.035, 0.04, 0.046);
     vec3 silver = vec3(0.78, 0.84, 0.88);
-    vec3 whiteHot = vec3(1.0, 0.98, 0.93);
+    vec3 whiteHot = uLightColor;
     vec3 coolPrism = vec3(0.72, 0.86, 1.0);
+    vec3 lightShade = mix(vec3(0.82), normalize(uLightColor + 0.001), 0.64);
+    vec3 tintedSilver = mix(silver, lightShade, 0.58);
+    vec3 tintedPrism = mix(coolPrism, lightShade, 0.72);
 
     vec3 base = mix(smokedGlass, graphite, smoothstep(-0.18, 0.34, vHeight));
     base += diffuseA * vec3(0.055, 0.06, 0.066);
@@ -101,9 +105,9 @@ export const pearlGlassFragmentShader: string = `
     diagonalVoid *= leftSoftness;
     float surfaceMask = smoothstep(0.08, 0.72, borderFade * diagonalVoid);
 
-    vec3 liquidReflection = silver * (0.035 + diffuseA * 0.18 + caustic * 0.2);
-    vec3 rim = mix(silver, coolPrism, caustic) * thinEdge * 1.08 * surfaceMask;
-    vec3 glint = (whiteHot * (specA * 0.82 + specC * 1.45) + coolPrism * specB * 0.26) * surfaceMask;
+    vec3 liquidReflection = tintedSilver * (0.035 + diffuseA * 0.18 + caustic * 0.2);
+    vec3 rim = mix(tintedSilver, tintedPrism, caustic) * thinEdge * 1.08 * surfaceMask;
+    vec3 glint = (whiteHot * (specA * 0.82 + specC * 1.45) + tintedPrism * specB * 0.26) * surfaceMask;
 
     vec2 glitterUv = vUv + normal.xy * 0.075 + vec2(vHeight * 0.08, -vHeight * 0.05);
     float glitterFlow = smoothstep(0.26, 1.0, caustic + fresnel * 0.82 + brightVein * 0.55);
@@ -118,7 +122,7 @@ export const pearlGlassFragmentShader: string = `
     float shadowFold = smoothstep(-0.12, 0.28, vHeight);
     vec3 color = mix(base * 0.32, base + liquidReflection, shadowFold);
     color += rim + glint;
-    color += silver * brightVein * 0.18;
+    color += tintedSilver * brightVein * 0.18;
     color += whiteHot * hairline * caustic * 0.16;
     color += whiteHot * sparkle * 0.62;
     color += prismGlitter * sparkle * 0.22;
