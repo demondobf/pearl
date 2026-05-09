@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc && vite build",
+    "verify:pwa": "node scripts/verify-pwa.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

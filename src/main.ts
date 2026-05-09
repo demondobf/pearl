@@ -1,3 +1,4 @@
+import "./register-service-worker";
 import { createPearlGlassScene } from "./scene/create-pearl-glass-scene";
 
 function getLightColorFromQuery(): string | undefined {
