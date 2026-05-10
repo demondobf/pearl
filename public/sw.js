@@ -1,46 +1,57 @@
-const CACHE_NAME = "pearl-pwa-v2";
-const APP_SHELL = [
-  "/",
-  "/index.html",
+const CACHE_NAME = "pearl-pwa";
+const REQUIRED_APP_SHELL = [
   "/manifest.webmanifest",
-  "/favicon.svg",
   "/pwa-icon-192.png",
   "/pwa-icon-512.png",
 ];
 
-async function cacheBuiltAssets(cache) {
-  const page = await fetch("/index.html", { cache: "no-cache" });
-  const html = await page.text();
-  const htmlResponse = new Response(html, {
-    headers: page.headers,
-    status: page.status,
-    statusText: page.statusText,
-  });
+async function fetchRequired(url) {
+  const response = await fetch(url, { cache: "reload" });
 
-  await cache.put("/index.html", htmlResponse.clone());
-  await cache.put("/", htmlResponse.clone());
+  if (!response.ok) {
+    throw new Error(`Unable to precache ${url}: ${response.status}`);
+  }
 
-  const assetUrls = [...html.matchAll(/(?:src|href)="([^"]+)"/g)]
+  return response;
+}
+
+async function cacheRequired(cache, url) {
+  const response = await fetchRequired(url);
+
+  await cache.put(url, response);
+}
+
+async function cacheRequiredAssets(cache, urls) {
+  await Promise.all(urls.map((url) => cacheRequired(cache, url)));
+}
+
+function getSameOriginHtmlAssets(html) {
+  return [...html.matchAll(/(?:src|href)=["']([^"']+)["']/g)]
     .map((match) => new URL(match[1], self.location.origin))
     .filter((url) => url.origin === self.location.origin)
     .map((url) => url.href);
+}
 
-  await Promise.all(
-    assetUrls.map(async (url) => {
-      const response = await fetch(url);
+async function cacheHtmlAssets(cache, html) {
+  const assetUrls = getSameOriginHtmlAssets(html);
 
-      if (response.ok) {
-        await cache.put(url, response);
-      }
-    }),
-  );
+  await Promise.all(assetUrls.map((url) => cacheRequired(cache, url)));
+}
+
+async function cacheAppShell(cache, page) {
+  const html = await page.clone().text();
+
+  await cacheHtmlAssets(cache, html);
+  await cache.put("/index.html", page.clone());
+  await cache.put("/", page.clone());
 }
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
-      await cache.addAll(APP_SHELL);
-      await cacheBuiltAssets(cache);
+      await cacheRequiredAssets(cache, REQUIRED_APP_SHELL);
+      const page = await fetchRequired("/index.html");
+      await cacheAppShell(cache, page);
     }),
   );
   self.skipWaiting();
@@ -78,11 +89,10 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put("/", copy);
-            cache.put("/index.html", response.clone());
-          });
+          if (response.ok) {
+            event.waitUntil(caches.open(CACHE_NAME).then((cache) => cacheAppShell(cache, response.clone())));
+          }
+
           return response;
         })
         .catch(() => caches.match("/index.html", { ignoreSearch: true })),
