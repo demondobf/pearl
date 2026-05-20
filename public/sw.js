@@ -39,11 +39,14 @@ async function cacheHtmlAssets(cache, html) {
 }
 
 async function cacheAppShell(cache, page) {
-  const html = await page.clone().text();
+  const htmlCopy = page.clone();
+  const indexCopy = page.clone();
+  const rootCopy = page.clone();
+  const html = await htmlCopy.text();
 
   await cacheHtmlAssets(cache, html);
-  await cache.put("/index.html", page.clone());
-  await cache.put("/", page.clone());
+  await cache.put("/index.html", indexCopy);
+  await cache.put("/", rootCopy);
 }
 
 self.addEventListener("install", (event) => {
